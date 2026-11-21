@@ -23,7 +23,9 @@ def project_approved_payload(
         "ram_pct": float(metrics.get("ram_pct", 0.0)),
         "ram_total_gb": float(metrics.get("ram_total_gb", 0.0)),
         "ram_available_gb": float(metrics.get("ram_available_gb", 0.0)),
+        "ram_used_gb": float(metrics.get("ram_used_gb", 0.0)),
         "disk_pct": float(metrics.get("disk_pct", 0.0)),
+        "disk_activity_pct": float(metrics.get("disk_activity_pct", 0.0)),
         "disk_read_mb": float(metrics.get("disk_read_mb", 0.0)),
         "disk_write_mb": float(metrics.get("disk_write_mb", 0.0)),
         "net_bytes_sent": int(metrics.get("net_bytes_sent", 0)),
@@ -42,6 +44,9 @@ def project_approved_payload(
             "hostname": str(metrics.get("os_info", {}).get("hostname", "LAPTOP-LOCAL"))
         },
         "collection_timestamp": str(metrics.get("collection_timestamp", timestamp_utc)),
+        "local_time": str(metrics.get("local_time", "")),
+        "local_date": str(metrics.get("local_date", "")),
+        "timezone": str(metrics.get("timezone", "")),
         "is_live_hardware": bool(metrics.get("is_live_hardware", True))
     }
 

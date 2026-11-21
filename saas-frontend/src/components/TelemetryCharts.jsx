@@ -7,9 +7,20 @@ import { Activity, Radio, Zap, Clock } from 'lucide-react';
 export default function TelemetryCharts({ telemetry = [], latestMetrics = {} }) {
   // Format data for Recharts safely
   const safeTelemetry = Array.isArray(telemetry) ? telemetry : [];
+  const formatToLocalTime = (isoString) => {
+    if (!isoString) return "";
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return isoString;
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+    } catch {
+      return isoString;
+    }
+  };
+
   const chartData = safeTelemetry.length > 0
     ? safeTelemetry.map((t, idx) => ({
-        time: t.timestamp_utc ? t.timestamp_utc.split('T')[1]?.replace('Z', '') : `t-${idx}`,
+        time: t.timestamp_utc ? formatToLocalTime(t.timestamp_utc) : (t.metrics?.local_time || `t-${idx}`),
         cpu: Number(t.metrics?.cpu_pct) || 0,
         ram: Number(t.metrics?.ram_pct) || 0,
         latency: Number(t.metrics?.latency_ms) || 0,

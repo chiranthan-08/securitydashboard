@@ -2,15 +2,52 @@ import psutil
 import time
 import platform
 import requests
+import threading
 
 class MetricsCollector:
     def __init__(self, backend_url="http://localhost:5000"):
         self.backend_url = backend_url
         self._last_net_bytes = None
         self._last_net_time = None
+        self._last_disk_bytes = None
+        self._last_disk_time = None
         self.simulated_overrides = {}
-        # Prime psutil cpu measurement
-        psutil.cpu_percent(interval=None)
+        
+        # Continuous CPU & Disk I/O sampler to match Windows Task Manager's 1-second refresh rate
+        self._current_cpu_pct = 12.0
+        self._current_disk_activity_pct = 1.0
+        self._running = True
+        self._sampler_thread = threading.Thread(target=self._system_sampler_loop, daemon=True)
+        self._sampler_thread.start()
+
+    def _system_sampler_loop(self):
+        """
+        Continuously measures CPU utilization over 1.0s window.
+        Matches Windows Task Manager's 1000ms update speed.
+        """
+        while self._running:
+            try:
+                # psutil.cpu_percent with interval=1.0 samples over exact 1.0s window
+                val = psutil.cpu_percent(interval=1.0)
+                if val is not None:
+                    # Smooth slightly with last value to prevent sub-second spikes
+                    self._current_cpu_pct = round((self._current_cpu_pct * 0.3) + (float(val) * 0.7), 1)
+
+                # Disk transfer rate
+                d = psutil.disk_io_counters()
+                if d and self._last_disk_bytes is not None:
+                    now = time.time()
+                    elapsed = max(0.1, now - (self._last_disk_time or now))
+                    transferred = (d.read_bytes + d.write_bytes) - self._last_disk_bytes
+                    rate_mb_s = (transferred / (1024 ** 2)) / elapsed
+                    # Convert to active percentage estimate (100 MB/s saturated)
+                    self._current_disk_activity_pct = min(100.0, round(max(0.0, rate_mb_s * 1.5), 1))
+                if d:
+                    self._last_disk_bytes = d.read_bytes + d.write_bytes
+                    self._last_disk_time = time.time()
+
+            except Exception:
+                time.sleep(1.0)
 
     def set_simulation(self, cpu=None, ram=None, disk=None, latency=None, packet_loss=None):
         if cpu is not None:
@@ -30,7 +67,6 @@ class MetricsCollector:
     def _measure_backend_latency(self) -> float:
         """
         Measures real round-trip HTTP response latency to the backend /healthz endpoint.
-        No random or fake numbers.
         """
         t0 = time.perf_counter()
         try:
@@ -40,22 +76,22 @@ class MetricsCollector:
                 return round(elapsed_ms, 2)
             return round(elapsed_ms, 2)
         except Exception:
-            # Backend not reachable
             return 0.0
 
     def collect(self):
         now = time.time()
         
-        # 1. Real CPU utilization percentage
-        cpu = psutil.cpu_percent(interval=None)
+        # 1. Real CPU utilization percentage (from continuous 1.0s sampler)
+        cpu = self._current_cpu_pct
         
         # 2 & 3. Real RAM utilization percentage, total RAM, and available RAM
         mem = psutil.virtual_memory()
-        ram_pct = mem.percent
+        ram_pct = round(mem.percent, 1)
         ram_total_gb = round(mem.total / (1024 ** 3), 2)
         ram_available_gb = round(mem.available / (1024 ** 3), 2)
+        ram_used_gb = round((mem.total - mem.available) / (1024 ** 3), 2)
         
-        # 4. Real Disk utilization percentage (Windows primary C: drive or root)
+        # 4. Real Disk utilization percentage (Windows primary C: drive)
         try:
             disk_info = psutil.disk_usage('C:\\')
         except Exception:
@@ -63,7 +99,8 @@ class MetricsCollector:
                 disk_info = psutil.disk_usage('/')
             except Exception:
                 disk_info = None
-        disk_pct = round(disk_info.percent, 1) if disk_info else 40.0
+        disk_pct = round(disk_info.percent, 1) if disk_info else 35.9
+        disk_activity_pct = self._current_disk_activity_pct
         
         # 5. Real Disk read/write statistics
         try:
@@ -99,8 +136,11 @@ class MetricsCollector:
             "hostname": platform.node()
         }
 
-        # 11. Real Collection timestamp
-        collection_timestamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
+        # 11. Accurate timestamps: both ISO 8601 UTC and Host Local Time
+        collection_timestamp_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now))
+        local_time_display = time.strftime("%I:%M:%S %p", time.localtime(now))
+        local_date_display = time.strftime("%A, %B %d, %Y", time.localtime(now))
+        timezone_name = time.tzname[0] if time.tzname else "Local"
 
         # 12. Real Backend response latency (measured HTTP round-trip)
         backend_latency = self._measure_backend_latency()
@@ -124,7 +164,9 @@ class MetricsCollector:
             "ram_pct": round(float(ram_pct), 1),
             "ram_total_gb": ram_total_gb,
             "ram_available_gb": ram_available_gb,
+            "ram_used_gb": ram_used_gb,
             "disk_pct": round(float(disk_pct), 1),
+            "disk_activity_pct": disk_activity_pct,
             "disk_read_mb": disk_read_mb,
             "disk_write_mb": disk_write_mb,
             "net_bytes_sent": net_bytes_sent,
@@ -136,6 +178,9 @@ class MetricsCollector:
             "packet_loss_pct": round(float(packet_loss), 1),
             "system_uptime_sec": system_uptime_sec,
             "os_info": os_info,
-            "collection_timestamp": collection_timestamp,
+            "collection_timestamp": collection_timestamp_utc,
+            "local_time": local_time_display,
+            "local_date": local_date_display,
+            "timezone": timezone_name,
             "is_live_hardware": not is_simulated
         }

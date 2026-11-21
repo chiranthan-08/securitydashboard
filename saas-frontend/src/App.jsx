@@ -84,6 +84,13 @@ export default function App() {
   const [collectors, setCollectors] = useState([]);
   const [isLive, setIsLive] = useState(false);
 
+  // Live ticking host clock
+  const [hostClock, setHostClock] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setHostClock(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Load all tenant-scoped data
   const loadTenantData = useCallback(async () => {
     try {
@@ -237,6 +244,17 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <div className="hidden md:flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg px-3 py-1 font-mono text-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-white font-bold">
+                {hostClock.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
+              </span>
+              <span className="text-slate-500">•</span>
+              <span className="text-slate-400">
+                {hostClock.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+
             <button
               onClick={loadTenantData}
               className="p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
