@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CicadaApprovedEgressPayload",
+  "type": "object",
+  "required": [
+    "payload_id",
+    "sequence_num",
+    "tenant_id",
+    "source_id",
+    "timestamp_utc",
+    "sampling_mode",
+    "health_state",
+    "metrics",
+    "security_summary",
+    "egress_audit"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "payload_id": {
+      "type": "string",
+      "pattern": "^PAY-[0-9]{8}-[0-9]{4,}$"
+    },
+    "sequence_num": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "tenant_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 64
+    },
+    "source_id": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 64
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "sampling_mode": {
+      "type": "string",
+      "enum": ["HEARTBEAT", "STANDARD_SUMMARY", "HIGH_FREQ_BURST", "ANOMALY_BURST"]
+    },
+    "health_state": {
+      "type": "string",
+      "enum": ["EXCELLENT", "GOOD", "FAIR", "POOR"]
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["cpu_pct", "ram_pct", "disk_pct", "latency_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "cpu_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "ram_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "disk_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "latency_ms": { "type": "number", "minimum": 0, "maximum": 10000 },
+        "packet_loss_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+        "net_rx_bps": { "type": "number", "minimum": 0 },
+        "net_tx_bps": { "type": "number", "minimum": 0 }
+      }
+    },
+    "security_summary": {
+      "type": "object",
+      "required": ["auth_failures_1m", "pseudonymous_actor", "pii_redacted_count"],
+      "additionalProperties": false,
+      "properties": {
+        "auth_failures_1m": { "type": "integer", "minimum": 0 },
+        "pseudonymous_actor": { "type": "string" },
+        "pii_redacted_count": { "type": "integer", "minimum": 0 },
+        "attack_flag": { "type": "boolean" }
+      }
+    },
+    "egress_audit": {
+      "type": "object",
+      "required": ["raw_logs_transmitted", "sensitive_fields_detected", "previous_hash", "payload_hash"],
+      "additionalProperties": false,
+      "properties": {
+        "raw_logs_transmitted": { "type": "integer", "enum": [0] },
+        "sensitive_fields_detected": { "type": "integer", "enum": [0] },
+        "previous_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "payload_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    }
+  }
+}

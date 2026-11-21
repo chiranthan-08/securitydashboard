@@ -1,0 +1,14 @@
+{
+  "name": "cicada-sentinel-workspace",
+  "version": "1.0.0",
+  "description": "CICADA Sentinel - Privacy-First Zero-Trust AIOps Platform",
+  "scripts": {
+    "dev": "npm --prefix saas-frontend run dev",
+    "start": "npm --prefix saas-frontend run dev",
+    "frontend": "npm --prefix saas-frontend run dev",
+    "backend": "npm --prefix saas-backend start",
+    "install:all": "npm --prefix saas-backend install && npm --prefix saas-frontend install",
+    "test:backend": "npm --prefix saas-backend test",
+    "test:collector": "python -c \"import sys; sys.path.insert(0, 'local-collector'); import unittest; suite = unittest.defaultTestLoader.discover('local-collector/tests'); result = unittest.TextTestRunner(verbosity=2).run(suite); sys.exit(0 if result.wasSuccessful() else 1)\""
+  }
+}
