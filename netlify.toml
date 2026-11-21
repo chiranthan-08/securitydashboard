@@ -1,0 +1,13 @@
+# Netlify configuration for CICADA Sentinel SaaS Frontend
+[build]
+  base = "saas-frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

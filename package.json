@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "CICADA Sentinel - Privacy-First Zero-Trust AIOps Platform",
   "scripts": {
+    "build": "npm --prefix saas-frontend run build",
     "dev": "npm --prefix saas-frontend run dev",
     "start": "npm --prefix saas-frontend run dev",
     "frontend": "npm --prefix saas-frontend run dev",
