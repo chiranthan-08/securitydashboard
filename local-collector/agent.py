@@ -2,6 +2,7 @@ import time
 import json
 import base64
 import hashlib
+import hmac
 import threading
 from datetime import datetime, timezone
 
@@ -25,7 +26,7 @@ class CicadaAgent:
         self.chain_id = CHAIN_ID
         self.tenant_id = TENANT_ID
         
-        self.metrics_collector = MetricsCollector()
+        self.metrics_collector = MetricsCollector(backend_url=SAAS_BACKEND_URL)
         self.log_store = LocalLogStore()
         self.privacy_guard = PrivacyGuard(salt=ROTATING_SALT)
         self.sampling_engine = DynamicSamplingEngine()
@@ -121,15 +122,20 @@ class CicadaAgent:
         # Commit to local append-only tamper-evident ledger
         prev_hash, entry_hash = self.ledger.record_entry(seq, payload_id, payload_hash, draft_payload, now_iso)
 
-        # 7. Exact-byte transport envelope (Base64 is transport encoding, NOT encryption)
+        # 7. Exact-byte transport envelope with HMAC-SHA256 signature
         payload_b64 = base64.b64encode(final_bytes).decode('ascii')
+        hmac_sig = hmac.new(API_KEY.encode('utf-8'), final_bytes, hashlib.sha256).hexdigest()
         envelope = {
             "payload_b64": payload_b64,
             "payload_sha256": payload_hash,
             "chain_id": self.chain_id,
             "sequence": seq,
             "previous_entry_hash": prev_hash,
-            "entry_hash": entry_hash
+            "entry_hash": entry_hash,
+            "hmac_signature": hmac_sig,
+            "tenant_id": self.tenant_id,
+            "source_id": self.collector_id,
+            "timestamp_utc": now_iso
         }
 
         # 8. Persist to SQLite Outbox (Durable Ring Buffer for Offline Resiliency)
@@ -153,7 +159,9 @@ class CicadaAgent:
             "connected_to_saas": self.saas_client.is_connected,
             "last_cycle_time": now_iso,
             "last_payload_id": payload_id,
-            "latest_entry_hash": entry_hash
+            "latest_entry_hash": entry_hash,
+            "is_live_hardware": metrics.get("is_live_hardware", True),
+            "os_info": metrics.get("os_info", {})
         }
 
     def _drain_outbox(self):

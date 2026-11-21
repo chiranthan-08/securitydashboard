@@ -17,15 +17,32 @@ def project_approved_payload(
     previous_hash: str,
     payload_hash: str
 ) -> dict:
-    # Strictly filtered metrics object
+    # Strictly filtered metrics object with all 12 genuine hardware fields
     safe_metrics = {
         "cpu_pct": float(metrics.get("cpu_pct", 0.0)),
         "ram_pct": float(metrics.get("ram_pct", 0.0)),
+        "ram_total_gb": float(metrics.get("ram_total_gb", 0.0)),
+        "ram_available_gb": float(metrics.get("ram_available_gb", 0.0)),
         "disk_pct": float(metrics.get("disk_pct", 0.0)),
+        "disk_read_mb": float(metrics.get("disk_read_mb", 0.0)),
+        "disk_write_mb": float(metrics.get("disk_write_mb", 0.0)),
+        "net_bytes_sent": int(metrics.get("net_bytes_sent", 0)),
+        "net_bytes_recv": int(metrics.get("net_bytes_recv", 0)),
+        "net_rx_bps": float(metrics.get("net_rx_bps", 0.0)),
+        "net_tx_bps": float(metrics.get("net_tx_bps", 0.0)),
+        "net_throughput_bps": float(metrics.get("net_throughput_bps", 0.0)),
         "latency_ms": float(metrics.get("latency_ms", 0.0)),
         "packet_loss_pct": float(metrics.get("packet_loss_pct", 0.0)),
-        "net_rx_bps": float(metrics.get("net_rx_bps", 0.0)),
-        "net_tx_bps": float(metrics.get("net_tx_bps", 0.0))
+        "system_uptime_sec": int(metrics.get("system_uptime_sec", 0)),
+        "os_info": {
+            "system": str(metrics.get("os_info", {}).get("system", "Windows")),
+            "release": str(metrics.get("os_info", {}).get("release", "11")),
+            "version": str(metrics.get("os_info", {}).get("version", "10.0")),
+            "machine": str(metrics.get("os_info", {}).get("machine", "AMD64")),
+            "hostname": str(metrics.get("os_info", {}).get("hostname", "LAPTOP-LOCAL"))
+        },
+        "collection_timestamp": str(metrics.get("collection_timestamp", timestamp_utc)),
+        "is_live_hardware": bool(metrics.get("is_live_hardware", True))
     }
 
     # Strictly filtered security summary

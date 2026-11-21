@@ -2,6 +2,7 @@ import re
 import hmac
 import hashlib
 import math
+from privacy.guardian_audit import GuardianAuditLogger
 
 # Regex patterns for detecting and scrubbing sensitive data
 EMAIL_REGEX = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b')
@@ -102,6 +103,7 @@ class PrivacyGuard:
         entropy = calculate_shannon_entropy(raw_text)
 
         if canary:
+            GuardianAuditLogger.log_violation("CANARY_HONEYTOKEN", f"Exposed canary secret: {canary}", raw_text, "CRITICAL_BLOCKED")
             return {
                 "decision": "CRITICAL_BLOCKED",
                 "reason": f"Canary Honeytoken Exposure: {canary}",
@@ -114,6 +116,7 @@ class PrivacyGuard:
         # Check if high-entropy secret detected
         if entropy > 4.5 and len(raw_text) > 30:
             self.high_entropy_blocks += 1
+            GuardianAuditLogger.log_violation("HIGH_SHANNON_ENTROPY", f"Shannon entropy {entropy} exceeded safe threshold 4.5", raw_text, "SUSPICIOUS_HELD")
             return {
                 "decision": "SUSPICIOUS_HELD",
                 "reason": f"High Shannon Entropy ({entropy} > 4.5) indicates probable cryptographic secret",
@@ -124,6 +127,8 @@ class PrivacyGuard:
             }
 
         redacted, count = self.redact_text(raw_text)
+        if count > 0:
+            GuardianAuditLogger.log_violation("PII_REDACTION", f"Redacted {count} sensitive field(s) (Email/IP/Secret)", raw_text, "REDACTED_AND_APPROVED")
         return {
             "decision": "APPROVED",
             "reason": "Passed strict allow-list and privacy inspection",

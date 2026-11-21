@@ -14,37 +14,47 @@ const collectorSchema = new mongoose.Schema({
   sequence: { type: Number, default: 0 },
   health_state: { type: String, default: "EXCELLENT" },
   sampling_mode: { type: String, default: "HEARTBEAT" },
-  metrics: {
-    cpu_pct: { type: Number, default: 0 },
-    ram_pct: { type: Number, default: 0 },
-    disk_pct: { type: Number, default: 0 },
-    latency_ms: { type: Number, default: 0 }
-  },
+  metrics: mongoose.Schema.Types.Mixed,
   status: { type: String, default: "ONLINE" },
   version: { type: String, default: "1.0.0" },
   lastSeenAt: { type: Date, default: Date.now }
-}, { timestamps: true });
+}, { collection: 'collectors', timestamps: true });
 collectorSchema.index({ tenantId: 1, collectorId: 1 }, { unique: true });
 
-// 2. Telemetry Records Schema
+// 2. Telemetry Records Schema (with 7-day TTL retention index)
 const telemetrySchema = new mongoose.Schema({
   tenant_id: { type: String, required: true, index: true },
   source_id: { type: String, required: true, index: true },
   payload_id: { type: String, required: true, index: true },
   timestamp_utc: { type: String, required: true },
-  receivedAt: { type: Date, default: Date.now, index: true },
+  receivedAt: { type: Date, default: Date.now, index: true, expires: 604800 },
   metrics: {
     cpu_pct: Number,
     ram_pct: Number,
+    ram_total_gb: Number,
+    ram_available_gb: Number,
     disk_pct: Number,
-    latency_ms: Number
+    disk_read_mb: Number,
+    disk_write_mb: Number,
+    net_bytes_sent: Number,
+    net_bytes_recv: Number,
+    net_rx_bps: Number,
+    net_tx_bps: Number,
+    net_throughput_bps: Number,
+    latency_ms: Number,
+    packet_loss_pct: Number,
+    system_uptime_sec: Number,
+    os_info: mongoose.Schema.Types.Mixed,
+    collection_timestamp: String,
+    is_live_hardware: Boolean
   },
   sampling_mode: { type: String, default: "HEARTBEAT" },
   health_state: { type: String, default: "EXCELLENT" },
   envelope_hashes: {
     payload_sha256: String,
     previous_entry_hash: String,
-    entry_hash: String
+    entry_hash: String,
+    hmac_signature: String
   },
   aiInference: {
     anomalyScore: Number,
@@ -54,7 +64,7 @@ const telemetrySchema = new mongoose.Schema({
     primaryFactor: String,
     baselineDeviations: mongoose.Schema.Types.Mixed
   }
-}, { timestamps: true });
+}, { collection: 'telemetry', timestamps: true });
 telemetrySchema.index({ tenant_id: 1, source_id: 1, payload_id: 1 }, { unique: true });
 
 // 3. Egress Proof Ledger Schema
@@ -88,9 +98,9 @@ const incidentSchema = new mongoose.Schema({
   firstSeenAt: { type: Date, default: Date.now },
   lastSeenAt: { type: Date, default: Date.now },
   remediation: mongoose.Schema.Types.Mixed
-}, { timestamps: true });
+}, { collection: 'incidents', timestamps: true });
 
-// 5. Alert History Schema
+// 5. Alert History / Security Events Schema
 const alertSchema = new mongoose.Schema({
   tenantId: { type: String, required: true, index: true },
   id: { type: String, required: true },
@@ -99,7 +109,7 @@ const alertSchema = new mongoose.Schema({
   collectorId: { type: String },
   timestamp: { type: Date, default: Date.now },
   details: mongoose.Schema.Types.Mixed
-}, { timestamps: true });
+}, { collection: 'security_events', timestamps: true });
 
 
 // ==================== 8 DEDICATED INNOVATION FEATURE SCHEMAS ====================

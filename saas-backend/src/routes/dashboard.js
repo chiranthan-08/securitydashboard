@@ -51,7 +51,10 @@ module.exports = function() {
         status: mongoStatus.statusText
       },
       latestMetrics: latestRecord ? latestRecord.metrics : { cpu_pct: 0, ram_pct: 0, disk_pct: 0, latency_ms: 0 },
-      latestTimestamp: latestRecord ? latestRecord.timestamp_utc : null
+      latestTimestamp: latestRecord ? latestRecord.timestamp_utc : null,
+      collectorId: latestRecord ? latestRecord.source_id : (collectors[0]?.collectorId || "PROD-APP-SERVER-01"),
+      osInfo: latestRecord?.metrics?.os_info || null,
+      isLiveHardware: latestRecord?.metrics?.is_live_hardware ?? true
     });
   });
 

@@ -1,5 +1,6 @@
 import sqlite3
 import threading
+import time
 
 class SQLiteOutbox:
     def __init__(self, db_path="collector_queue.db"):
@@ -21,7 +22,8 @@ class SQLiteOutbox:
                     envelope_json TEXT,
                     status TEXT DEFAULT 'pending',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    retries INTEGER DEFAULT 0
+                    retries INTEGER DEFAULT 0,
+                    last_retry_ts REAL DEFAULT 0
                 )
             """)
             cursor.execute("""
@@ -32,6 +34,11 @@ class SQLiteOutbox:
             """)
             # Initialize sequence counter if not exists
             cursor.execute("INSERT OR IGNORE INTO state (key, value) VALUES ('next_sequence', '1')")
+            # Migrate column if older database exists
+            try:
+                cursor.execute("ALTER TABLE outbox ADD COLUMN last_retry_ts REAL DEFAULT 0")
+            except Exception:
+                pass
             conn.commit()
 
     def get_next_sequence(self) -> int:
@@ -48,33 +55,66 @@ class SQLiteOutbox:
         with self._lock, self._get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT OR REPLACE INTO outbox (payload_id, sequence_num, envelope_json, status, retries)
-                VALUES (?, ?, ?, 'pending', 0)
+                INSERT OR REPLACE INTO outbox (payload_id, sequence_num, envelope_json, status, retries, last_retry_ts)
+                VALUES (?, ?, ?, 'pending', 0, 0)
             """, (payload_id, sequence_num, envelope_json))
             conn.commit()
 
     def get_pending(self, limit=50):
+        """
+        Retrieves pending records eligible for transmission based on exponential backoff:
+        backoff = min(30.0, 1.5 ** retries) seconds
+        """
+        now = time.time()
         with self._lock, self._get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT id, payload_id, sequence_num, envelope_json, retries
+                SELECT id, payload_id, sequence_num, envelope_json, retries, last_retry_ts
                 FROM outbox
                 WHERE status = 'pending'
                 ORDER BY sequence_num ASC
                 LIMIT ?
-            """, (limit,))
-            return cursor.fetchall()
+            """, (limit * 2,))
+            rows = cursor.fetchall()
+
+            eligible = []
+            for r in rows:
+                item_id, payload_id, seq, env_json, retries, last_retry = r
+                backoff_sec = min(30.0, (1.5 ** min(retries, 8))) if retries > 0 else 0
+                if (now - (last_retry or 0)) >= backoff_sec:
+                    eligible.append((item_id, payload_id, seq, env_json, retries))
+                    if len(eligible) >= limit:
+                        break
+            return eligible
 
     def mark_acknowledged(self, payload_id: str):
+        """
+        Marks delivered and prunes old acknowledged records to maintain SQLite health.
+        """
         with self._lock, self._get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("UPDATE outbox SET status = 'acknowledged' WHERE payload_id = ?", (payload_id,))
+            
+            # Prune old acknowledged records, keeping only the latest 100 for verification
+            cursor.execute("""
+                DELETE FROM outbox 
+                WHERE status = 'acknowledged' 
+                  AND id NOT IN (
+                      SELECT id FROM outbox 
+                      WHERE status = 'acknowledged' 
+                      ORDER BY id DESC LIMIT 100
+                  )
+            """)
             conn.commit()
 
     def increment_retry(self, item_id: int):
         with self._lock, self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("UPDATE outbox SET retries = retries + 1 WHERE id = ?", (item_id,))
+            cursor.execute("""
+                UPDATE outbox 
+                SET retries = retries + 1, last_retry_ts = ? 
+                WHERE id = ?
+            """, (time.time(), item_id))
             conn.commit()
 
     def get_queue_depth(self) -> int:

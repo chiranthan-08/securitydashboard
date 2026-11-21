@@ -6,6 +6,7 @@ import threading
 
 from config import LOCAL_PORT, COLLECTOR_ID, CHAIN_ID, TENANT_ID, DB_PATH
 from agent import CicadaAgent
+from privacy.guardian_audit import GuardianAuditLogger
 
 agent = CicadaAgent()
 
@@ -77,6 +78,16 @@ class CollectorAPIHandler(http.server.BaseHTTPRequestHandler):
             self._set_cors_headers(200)
             verification = agent.ledger.verify_ledger()
             self.wfile.write(json.dumps(verification).encode('utf-8'))
+
+        elif path == "/privacy-audit":
+            self._set_cors_headers(200)
+            records = GuardianAuditLogger.get_recent_audit_records(limit=50)
+            self.wfile.write(json.dumps({"total_events": len(records), "records": records}).encode('utf-8'))
+
+        elif path == "/hardware":
+            self._set_cors_headers(200)
+            metrics = agent.metrics_collector.collect()
+            self.wfile.write(json.dumps({"collector_id": COLLECTOR_ID, "live_hardware": metrics}).encode('utf-8'))
 
         else:
             self._set_cors_headers(404)

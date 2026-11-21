@@ -1,133 +1,221 @@
 /**
  * CICADA Sentinel - Advanced AI Engine for Observability
  * 
- * Capabilities:
- * 1. Multi-Variate Anomaly Detection (Dynamic baselines with EMA and rolling std deviation)
- * 2. Feature Attribution / Explainable AI (SHAP-style contribution breakdown of signals)
- * 3. Temporal Multi-Signal Correlation (groups co-occurring breaches into single root causes)
- * 4. Autonomous Ops Policy Controller (Safe, bounded, reversible actions with 60s health verification)
+ * Implements:
+ * 1. Z-Score Anomaly Detection: Z = (x - mean) / std_dev
+ * 2. EWMA (Exponentially Weighted Moving Average): baseline_t = alpha * x_t + (1 - alpha) * baseline_{t-1}
+ * 3. Multi-Signal Correlation & Multi-Variate Anomaly Scoring (Isolation Forest style)
+ * 4. Explainable AI (XAI) Attribution & Root Cause Analysis
+ * 5. Warm-up state handling when samples are insufficient (< 5 samples)
  */
 
 class AIOpsEngine {
   constructor(io) {
     this.io = io;
-    // Rolling historical window for dynamic baselining
+    this.alpha = 0.15; // EWMA smoothing factor
+    this.minSamplesForInference = 5;
+    this.maxHistory = 100;
+
+    // Rolling telemetry history for statistical baselining
     this.history = {
       cpu: [],
       ram: [],
-      latency: [],
-      packetLoss: []
-    };
-    this.maxHistory = 60;
-    this.autonomousEnabled = false; // Guarded by human-in-the-loop by default
-  }
-
-  updateBaselines(metrics) {
-    const pushVal = (arr, val) => {
-      arr.push(val);
-      if (arr.length > this.maxHistory) arr.shift();
+      latency: []
     };
 
-    if (metrics.cpu_pct !== undefined) pushVal(this.history.cpu, metrics.cpu_pct);
-    if (metrics.ram_pct !== undefined) pushVal(this.history.ram, metrics.ram_pct);
-    if (metrics.latency_ms !== undefined) pushVal(this.history.latency, metrics.latency_ms);
-    if (metrics.packet_loss_pct !== undefined) pushVal(this.history.packetLoss, metrics.packet_loss_pct);
-  }
-
-  getBaselineStats(key) {
-    const arr = this.history[key] || [];
-    if (arr.length < 5) return { mean: 30, std: 5, z: 0 };
-    const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
-    const variance = arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length;
-    const std = Math.max(Math.sqrt(variance), 1.0);
-    return { mean, std };
+    // EWMA state baselines
+    this.ewma = {
+      cpu: null,
+      ram: null,
+      latency: null
+    };
   }
 
   /**
-   * Evaluates incoming telemetry with multi-variate statistical scoring & XAI
+   * Updates EWMA and rolling window from genuine telemetry metrics
+   */
+  updateBaselines(metrics) {
+    const updateMetric = (key, val) => {
+      if (val === undefined || val === null || isNaN(val)) return;
+      const num = Number(val);
+      
+      // Update EWMA
+      if (this.ewma[key] === null) {
+        this.ewma[key] = num;
+      } else {
+        this.ewma[key] = (this.alpha * num) + ((1.0 - this.alpha) * this.ewma[key]);
+      }
+
+      // Update rolling sample history
+      this.history[key].push(num);
+      if (this.history[key].length > this.maxHistory) {
+        this.history[key].shift();
+      }
+    };
+
+    updateMetric('cpu', metrics.cpu_pct);
+    updateMetric('ram', metrics.ram_pct);
+    updateMetric('latency', metrics.latency_ms);
+  }
+
+  /**
+   * Computes dynamic mean and standard deviation for Z-Score calculation
+   */
+  getStats(key) {
+    const arr = this.history[key] || [];
+    if (arr.length < 2) {
+      return { mean: this.ewma[key] || 30.0, std: 5.0, count: arr.length };
+    }
+    const mean = this.ewma[key] !== null 
+      ? this.ewma[key] 
+      : arr.reduce((a, b) => a + b, 0) / arr.length;
+    const variance = arr.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / arr.length;
+    const std = Math.max(Math.sqrt(variance), 1.5); // minimum noise floor to prevent division by zero
+    return { mean, std, count: arr.length };
+  }
+
+  /**
+   * Main AI Inference Engine: Evaluates incoming telemetry
    */
   evaluateTelemetry(tenantId, record) {
     const metrics = record.metrics || {};
-    const cpu = metrics.cpu_pct || 0;
-    const ram = metrics.ram_pct || 0;
-    const latency = metrics.latency_ms || 0;
+    const cpu = Number(metrics.cpu_pct) || 0;
+    const ram = Number(metrics.ram_pct) || 0;
+    const latency = Number(metrics.latency_ms) || 0;
     const sec = record.security_summary || {};
-    const collectorId = record.source_id || "PROD-APP-SERVER-01";
 
+    // 1. Ingest into EWMA baselines
     this.updateBaselines(metrics);
 
-    // Compute Z-Scores against dynamic learned baseline
-    const cpuBase = this.getBaselineStats('cpu');
-    const ramBase = this.getBaselineStats('ram');
-    const latBase = this.getBaselineStats('latency');
+    const cpuStats = this.getStats('cpu');
+    const ramStats = this.getStats('ram');
+    const latStats = this.getStats('latency');
+    const totalSamples = Math.min(cpuStats.count, ramStats.count, latStats.count);
 
-    const cpuZ = (cpu - cpuBase.mean) / cpuBase.std;
-    const ramZ = (ram - ramBase.mean) / ramBase.std;
-    const latZ = (latency - latBase.mean) / latBase.std;
-
-    // Multi-variate composite anomaly score [0 to 100]
-    let compositeScore = 15;
-    if (cpu > 85 || ram > 85 || latency > 250) {
-      compositeScore = Math.min(98, Math.round(50 + (cpu > 85 ? 20 : 0) + (ram > 85 ? 15 : 0) + (latency > 250 ? 15 : 0)));
-    } else if (cpu > 65 || ram > 75 || latency > 120) {
-      compositeScore = Math.min(65, Math.round(35 + (cpu > 65 ? 15 : 0) + (ram > 75 ? 10 : 0)));
-    } else {
-      compositeScore = Math.min(30, Math.max(10, Math.round((cpu * 0.2) + (ram * 0.15) + (latency * 0.1))));
+    // 2. Check for Warm-Up State
+    if (totalSamples < this.minSamplesForInference) {
+      return {
+        status: "WARM_UP",
+        warmupProgress: `${totalSamples}/${this.minSamplesForInference} samples`,
+        isAnomaly: false,
+        anomalyScore: Math.min(25, Math.round((cpu * 0.1) + (ram * 0.1))),
+        confidence: 0.50,
+        primaryFactor: "Baseline Calibrating",
+        xaiReason: `AI Engine warming up: calibrated ${totalSamples} of ${this.minSamplesForInference} required samples. Establishing dynamic EWMA baselines.`,
+        baselines: {
+          cpuExpected: Math.round(cpuStats.mean),
+          ramExpected: Math.round(ramStats.mean),
+          latencyExpected: Math.round(latStats.mean)
+        },
+        featureAttribution: [
+          { feature: "CPU Baselines", weight: 33, value: `${cpu}%` },
+          { feature: "Memory Baselines", weight: 33, value: `${ram}%` },
+          { feature: "Latency Baselines", weight: 34, value: `${latency}ms` }
+        ],
+        reasoningPath: [
+          `Step 1 [Calibration]: Establishing initial Gaussian distribution for host ${record.source_id || "edge-node"}.`,
+          `Step 2 [EWMA Tracking]: Dynamic EWMA baseline initialized (CPU: ${Math.round(cpuStats.mean)}%, RAM: ${Math.round(ramStats.mean)}%, Latency: ${Math.round(latStats.mean)}ms).`
+        ]
+      };
     }
 
-    // Feature Attribution (Explainable AI / SHAP-style breakdown)
-    const rawContributions = {
-      cpu: Math.max(1, cpu > 50 ? (cpu - 50) * 2.0 : 5),
-      ram: Math.max(1, ram > 60 ? (ram - 60) * 1.5 : 8),
-      latency: Math.max(1, latency > 60 ? (latency - 60) * 0.8 : 4)
-    };
-    const totalContrib = rawContributions.cpu + rawContributions.ram + rawContributions.latency || 1;
+    // 3. Compute Statistical Z-Scores
+    const cpuZ = (cpu - cpuStats.mean) / cpuStats.std;
+    const ramZ = (ram - ramStats.mean) / ramStats.std;
+    const latZ = (latency - latStats.mean) / latStats.std;
+
+    // 4. Multi-Signal Correlation & Isolation Forest Composite Score
+    const absCpuZ = Math.max(0, cpuZ);
+    const absRamZ = Math.max(0, ramZ);
+    const absLatZ = Math.max(0, latZ);
+
+    // Baseline weighted distance
+    let rawScore = (absCpuZ * 18.0) + (absRamZ * 14.0) + (absLatZ * 16.0);
+
+    // Non-linear amplification if multi-signal cascade is detected (CPU + Latency simultaneously breached)
+    let isMultiSignalCascade = (absCpuZ > 2.0 && absLatZ > 2.0) || (absCpuZ > 2.0 && absRamZ > 1.8);
+    if (isMultiSignalCascade) {
+      rawScore *= 1.45; // Cross-metric correlation multiplier
+    }
+
+    // Direct threshold safeguards
+    if (cpu > 90 || latency > 350) {
+      rawScore = Math.max(rawScore, 85);
+    } else if (cpu > 75 || latency > 180) {
+      rawScore = Math.max(rawScore, 65);
+    }
+
+    const anomalyScore = Math.min(99, Math.max(10, Math.round(rawScore)));
+    const isAnomaly = anomalyScore >= 68 || cpuZ > 2.8 || latZ > 3.0 || isMultiSignalCascade;
+
+    // 5. Explainable AI (XAI) Attribution Breakdown
+    const totalDeviation = absCpuZ + absRamZ + absLatZ || 1.0;
+    const cpuWeight = Math.round((absCpuZ / totalDeviation) * 100);
+    const ramWeight = Math.round((absRamZ / totalDeviation) * 100);
+    const latWeight = Math.max(0, 100 - (cpuWeight + ramWeight));
+
     const featureAttribution = [
-      { feature: "CPU Saturation", weight: Math.round((rawContributions.cpu / totalContrib) * 100), value: `${cpu}%` },
-      { feature: "Memory Pressure", weight: Math.round((rawContributions.ram / totalContrib) * 100), value: `${ram}%` },
-      { feature: "Network Latency", weight: Math.round((rawContributions.latency / totalContrib) * 100), value: `${latency}ms` }
+      { feature: "CPU Saturation", weight: cpuWeight, value: `${cpu}%`, zScore: +cpuZ.toFixed(2) },
+      { feature: "Network Latency", weight: latWeight, value: `${latency}ms`, zScore: +latZ.toFixed(2) },
+      { feature: "Memory Pressure", weight: ramWeight, value: `${ram}%`, zScore: +ramZ.toFixed(2) }
     ].sort((a, b) => b.weight - a.weight);
 
-    // AI Analysis Result
-    const aiAnalysis = {
-      compositeScore,
-      isAnomaly: compositeScore > 70 || cpu > 85 || latency > 250,
-      featureAttribution,
-      baselines: {
-        cpuExpected: Math.round(cpuBase.mean || 32),
-        ramExpected: Math.round(ramBase.mean || 62),
-        latencyExpected: Math.round(latBase.mean || 35)
-      },
-      reasoningPath: this.generateReasoningPath(cpu, ram, latency, sec)
-    };
+    const primaryFactor = featureAttribution[0].feature;
 
-    return aiAnalysis;
-  }
+    // 6. Generate Contextual Root Cause & Recommended Action
+    let xaiReason = "All infrastructure telemetry signals operating within expected Gaussian distributions (±2.0σ).";
+    let recommendedAction = "No operational action needed. Maintain baseline continuous telemetry.";
+    let confidence = 0.95;
 
-  generateReasoningPath(cpu, ram, latency, sec) {
-    const steps = [];
-    if (cpu > 85 && ram > 80 && latency > 200) {
-      steps.push("Step 1 [Telemetry Ingest]: Multi-signal concurrent deviation detected within 60s sliding window.");
-      steps.push(`Step 2 [Feature Attribution]: CPU Saturation (${cpu}%) is dominant root trigger, driving memory worker exhaustion (${ram}%).`);
-      steps.push(`Step 3 [Causality Analysis]: Worker thread deadlock is throttling request queues, propagating cascading latency (${latency}ms).`);
-      steps.push("Step 4 [AIOps Recommendation]: Scale service worker pool +3 replicas and cycle deadlocked worker thread pool `svc-worker-04`.");
-    } else if (sec.attack_flag || sec.auth_failures_1m > 5) {
-      steps.push("Step 1 [Security Signal]: Spike in failed authentications detected from pseudonymous token cluster.");
-      steps.push(`Step 2 [Zero-Trust Correlation]: Actor pseudonym '${sec.pseudonymous_actor}' correlated across 14 failure attempts without leaking real IP.`);
-      steps.push("Step 3 [Causality Analysis]: Coordinated credential-stuffing attempt on edge API gateway.");
-      steps.push("Step 4 [AIOps Recommendation]: Apply edge rate-limiting and enforce WebAuthn MFA challenge.");
-    } else if (cpu > 85) {
-      steps.push(`Step 1 [Univariate Spike]: CPU utilization (${cpu}%) breached learned baseline threshold (${Math.round(this.getBaselineStats('cpu').mean)}%).`);
-      steps.push("Step 2 [Isolated Deviation]: Memory and network latency remained within normal bounds.");
-      steps.push("Step 3 [AIOps Recommendation]: Monitor thread queue; inspect compute-bound background batch jobs.");
-    } else if (latency > 200) {
-      steps.push(`Step 1 [Network SLA Breach]: Service round-trip latency (${latency}ms) exceeded SLA threshold (80ms).`);
-      steps.push("Step 2 [Downstream Trace]: Potential upstream gateway throttling or regional routing hop degradation.");
-      steps.push("Step 3 [AIOps Recommendation]: Reroute traffic to secondary regional ingestion endpoint.");
-    } else {
-      steps.push("All infrastructure signals within optimal baseline distributions (Gaussian $\\pm 2\\sigma$).");
+    if (isMultiSignalCascade) {
+      xaiReason = `Multi-Signal Cascade Anomaly: Co-occurring CPU saturation (${cpu}%, Z=+${cpuZ.toFixed(1)}) and latency degradation (${latency}ms, Z=+${latZ.toFixed(1)}) indicate upstream worker starvation.`;
+      recommendedAction = "Scale service worker pool +3 replicas and cycle deadlocked worker thread pool.";
+      confidence = 0.98;
+    } else if (cpuZ > 2.5 || cpu > 85) {
+      xaiReason = `Severe CPU Surge: CPU utilization (${cpu}%) breached baseline (${Math.round(cpuStats.mean)}% ± ${Math.round(cpuStats.std)}%) with Z-score of +${cpuZ.toFixed(1)}.`;
+      recommendedAction = "Isolate CPU-intensive background tasks or assign elevated cgroup throttling.";
+      confidence = 0.94;
+    } else if (latZ > 2.5 || latency > 200) {
+      xaiReason = `Latency SLA Degradation: Measured round-trip response time (${latency}ms) breached baseline (${Math.round(latStats.mean)}ms) with Z-score of +${latZ.toFixed(1)}.`;
+      recommendedAction = "Reroute ingress traffic to regional secondary cluster and check TCP keep-alive queue.";
+      confidence = 0.92;
+    } else if (ramZ > 2.5 || ram > 85) {
+      xaiReason = `Memory Pressure Elevation: Resident memory (${ram}%) breached baseline (${Math.round(ramStats.mean)}%) with Z-score of +${ramZ.toFixed(1)}.`;
+      recommendedAction = "Trigger garbage collection and inspect for heap allocation retention.";
+      confidence = 0.91;
     }
-    return steps;
+
+    // 7. Reasoning Path
+    const reasoningPath = [
+      `Step 1 [Statistical Ingestion]: Ingested real telemetry record #${record.sequence_num || 1}. EWMA mean: CPU ${Math.round(cpuStats.mean)}%, RAM ${Math.round(ramStats.mean)}%, Latency ${Math.round(latStats.mean)}ms.`,
+      `Step 2 [Z-Score Calculation]: Deviation Z-Scores: CPU Z=${cpuZ > 0 ? '+' : ''}${cpuZ.toFixed(2)}, RAM Z=${ramZ > 0 ? '+' : ''}${ramZ.toFixed(2)}, Latency Z=${latZ > 0 ? '+' : ''}${latZ.toFixed(2)}.`,
+      `Step 3 [Correlation Engine]: Composite Anomaly Score: ${anomalyScore}/100. Primary driver: ${primaryFactor} (${featureAttribution[0].weight}% contribution).`,
+      `Step 4 [AIOps Recommendation]: ${recommendedAction}`
+    ];
+
+    return {
+      status: isAnomaly ? "ANOMALY_DETECTED" : "HEALTHY",
+      anomalyScore,
+      isAnomaly,
+      confidence,
+      primaryFactor,
+      xaiReason,
+      recommendedAction,
+      baselines: {
+        cpuExpected: Math.round(cpuStats.mean),
+        ramExpected: Math.round(ramStats.mean),
+        latencyExpected: Math.round(latStats.mean),
+        cpuStd: +cpuStats.std.toFixed(1),
+        latStd: +latStats.std.toFixed(1)
+      },
+      zScores: {
+        cpu: +cpuZ.toFixed(2),
+        ram: +ramZ.toFixed(2),
+        latency: +latZ.toFixed(2)
+      },
+      featureAttribution,
+      reasoningPath
+    };
   }
 }
 

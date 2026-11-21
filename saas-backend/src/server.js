@@ -60,12 +60,20 @@ const privacyShieldRoutes = require('./routes/privacyShield');
 // Simulation & PrivacyShield routes mounted for demo and evaluation
 app.use('/api/v1', simulationRoutes);
 app.use('/api/v1/privacyshield', privacyShieldRoutes);
+app.use('/api', simulationRoutes);
+app.use('/api/privacyshield', privacyShieldRoutes);
 
 // Ingestion API requires tenant & scoped credential authentication
 app.use('/api/v1', authenticateTenant, ingestionRoutes);
 app.use('/api/v1/dashboard', authenticateTenant, dashboardRoutes);
 app.use('/api/v1', authenticateTenant, dashboardRoutes);
 app.use('/api/v1', authenticateTenant, remediationRoutes);
+
+// Aliases for /api routes (as requested in Phase 3 specification)
+app.use('/api', authenticateTenant, ingestionRoutes);
+app.use('/api/dashboard', authenticateTenant, dashboardRoutes);
+app.use('/api', authenticateTenant, dashboardRoutes);
+app.use('/api', authenticateTenant, remediationRoutes);
 
 // Serve Static Frontend Dashboard on Port 5000
 const frontendDistPath = path.join(__dirname, '../../saas-frontend/dist');

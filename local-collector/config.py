@@ -10,8 +10,8 @@ LOCAL_PORT = int(os.getenv("CICADA_LOCAL_PORT", "8001"))
 DB_PATH = os.getenv("CICADA_DB_PATH", "collector_queue.db")
 ROTATING_SALT = os.getenv("CICADA_SALT", "cicada_salt_20261120")
 
-# Collection & sampling intervals in seconds
-COLLECT_INTERVAL_SEC = 2.0
+# Collection interval: Every 5 seconds (Phase 2 requirement)
+COLLECT_INTERVAL_SEC = float(os.getenv("CICADA_COLLECT_INTERVAL", "5.0"))
 HEARTBEAT_INTERVAL_SEC = 15.0
 
 # Thresholds
