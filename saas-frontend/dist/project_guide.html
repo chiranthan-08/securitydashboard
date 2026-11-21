@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CICADA 2026 Sentinel - Complete Project Guide & Documentation</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18mm 18mm 18mm 18mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+      color: #1e293b;
+      background: #ffffff;
+      line-height: 1.6;
+      font-size: 13px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page-break {
+      page-break-after: always;
+    }
+    .avoid-break {
+      page-break-inside: avoid;
+    }
+
+    /* Cover / Header */
+    .cover-container {
+      background: linear-gradient(135deg, #090d16 0%, #0f172a 100%);
+      color: #ffffff;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      border-bottom: 4px solid #0284c7;
+    }
+    .cover-tag {
+      display: inline-block;
+      background: #0284c7;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.25;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    .cover-subtitle {
+      font-size: 15px;
+      color: #94a3b8;
+      font-weight: 500;
+      margin-bottom: 18px;
+    }
+    .cover-meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .meta-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #e2e8f0;
+    }
+
+    /* Headings */
+    h2 {
+      font-size: 18px;
+      color: #0f172a;
+      border-left: 5px solid #0284c7;
+      padding-left: 12px;
+      margin: 24px 0 12px 0;
+      font-weight: 800;
+    }
+    h3 {
+      font-size: 14px;
+      color: #1e293b;
+      margin: 14px 0 6px 0;
+      font-weight: 700;
+    }
+
+    p {
+      margin-bottom: 12px;
+      color: #334155;
+    }
+
+    /* Callout & Highlight Boxes */
+    .box-info {
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-left: 5px solid #0284c7;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 14px 0;
+    }
+    .box-success {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-left: 5px solid #16a34a;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 14px 0;
+    }
+    .box-warn {
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-left: 5px solid #d97706;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin: 14px 0;
+    }
+
+    /* Step Cards */
+    .step-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+      background: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+    }
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .step-badge {
+      background: #0284c7;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .step-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .step-text {
+      font-size: 12.5px;
+      color: #475569;
+      margin: 0;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    /* Feature Cards Grid */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0;
+    }
+    .card-feature {
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: #ffffff;
+    }
+    .card-feature-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .card-num {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .card-body {
+      font-size: 11.5px;
+      color: #475569;
+      line-height: 1.45;
+    }
+
+    /* Formula Block */
+    .formula-box {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin: 8px 0 12px 0;
+      font-family: "SFMono-Regular", Consolas, "Courier New", monospace;
+      color: #0369a1;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid #cbd5e1;
+      padding-top: 10px;
+      margin-top: 24px;
+      display: flex;
+      justify-content: space-between;
+      color: #64748b;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PAGE 1: EXECUTIVE OVERVIEW ==================== -->
+  <div class="cover-container">
+    <div class="cover-tag">Official Project Guidebook</div>
+    <h1>CICADA 2026 Sentinel</h1>
+    <div class="cover-subtitle">
+      Zero-Trust Infrastructure Observability & Self-Protecting AIOps Platform
+    </div>
+    <div class="cover-meta">
+      <span class="meta-pill">Two-Tier Architecture</span>
+      <span class="meta-pill">AI Privacy Guardian</span>
+      <span class="meta-pill">MongoDB Atlas Cloud</span>
+      <span class="meta-pill">8 Innovation Engines</span>
+      <span class="meta-pill">Hackathon Ready</span>
+    </div>
+  </div>
+
+  <h2>1. What is CICADA Sentinel? (In Simple Words)</h2>
+  <p>
+    Imagine you run a large company with hundreds of production servers. You need to know if your servers are healthy (CPU, Memory, Disk, Network speed) and detect cyberattacks or crashes before they happen.
+  </p>
+  <p>
+    Traditionally, companies install monitoring tools like Datadog or Prometheus. But these tools have a <strong>huge privacy flaw</strong>: they suck up entire log files and send them to a third-party cloud. If an engineer accidentally printed a user's password, credit card number, or private API key into a log file, <strong>that confidential data is leaked to the outside world</strong>.
+  </p>
+  <div class="box-success">
+    <strong>The CICADA Sentinel Solution:</strong> We created an intelligent monitoring system where <strong>raw logs NEVER leave the customer's private computer</strong>. A local AI Guardian inspects every metric, filters out all passwords and confidential data, signs the safe numbers with cryptographic SHA-256 signatures, and transmits only clean mathematical performance telemetry to the cloud dashboard.
+  </div>
+
+  <h2>2. The Two-Tier Architecture (How It Works Step-by-Step)</h2>
+  <p>
+    Our system is divided into two decoupled tiers to guarantee zero-trust privacy:
+  </p>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">1</div>
+      <div class="step-title">Tier 1: Local Edge Collector (Runs on Customer Server)</div>
+    </div>
+    <div class="step-text">
+      A lightweight Python daemon runs directly on the local machine. It reads CPU, RAM, Disk, and Latency using native <code>psutil</code> system calls. It monitors local application logs without ever sending them out.
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">2</div>
+      <div class="step-title">The Local AI Privacy Guardian (The Pre-Egress Firewall)</div>
+    </div>
+    <div class="step-text">
+      Before anything leaves the computer, our AI Privacy Guardian inspects the payload. It runs regex allow-lists, scans for high-entropy secrets (passwords and API keys), and checks for fake canary tokens. If a secret is detected, transmission is immediately blocked locally!
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">3</div>
+      <div class="step-title">Cryptographic Envelope Signing & SQLite Outbox</div>
+    </div>
+    <div class="step-text">
+      The approved metadata is hashed with SHA-256 and chained to the previous transmission (like a blockchain block). It is HMAC-signed with the tenant's secret key and saved in a local SQLite outbox. If the internet goes down, the outbox holds the data and safely retries later.
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">4</div>
+      <div class="step-title">Tier 2: Central SaaS Cloud Platform (Node.js & MongoDB Atlas)</div>
+    </div>
+    <div class="step-text">
+      The SaaS cloud receives the signed envelope, verifies the cryptographic signature, checks sequence numbers to prevent duplicate payloads, stores the records in <strong>MongoDB Atlas</strong>, and streams live metrics to the NOC dashboard via WebSockets.
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-badge">5</div>
+      <div class="step-title">AIOps Correlation & Reversible Remediation</div>
+    </div>
+    <div class="step-text">
+      The cloud AI engine analyzes the telemetry. If CPU, RAM, and Latency spike at the same time, it groups them into a single incident, shows an explainable root cause, and offers an operator 1-click remediation with an automated 60-second safety rollback timer.
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>CICADA 2026 Sentinel • Complete Project Guide</span>
+    <span>Page 1 of 4</span>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== PAGE 2: TOOLS & TECH STACK ==================== -->
+  <h2>3. Tools & Technologies Used in This Project</h2>
+  <p>Here is the full breakdown of all technologies, frameworks, and programming languages powering CICADA Sentinel:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Component</th>
+        <th style="width: 25%;">Technology</th>
+        <th>What It Does in the Project</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Frontend UI</strong></td>
+        <td><strong>React 18 + Vite 5</strong></td>
+        <td>Fast single-page application (SPA) rendering the live Operations Dashboard, real-time charts, and 8 innovation consoles.</td>
+      </tr>
+      <tr>
+        <td><strong>UI Styling</strong></td>
+        <td><strong>Tailwind CSS 3</strong></td>
+        <td>Cyberpunk dark-mode enterprise theme designed for Network Operations Centers (NOC).</td>
+      </tr>
+      <tr>
+        <td><strong>Charts & Visuals</strong></td>
+        <td><strong>Recharts & Lucide Icons</strong></td>
+        <td>Live rolling time-series graphs for CPU, RAM, Disk, Latency, and interactive architecture diagrams.</td>
+      </tr>
+      <tr>
+        <td><strong>Backend API</strong></td>
+        <td><strong>Node.js (v24) + Express.js</strong></td>
+        <td>High-performance REST API handling collector ingestion, tenant authorization, and cryptographic signature checking.</td>
+      </tr>
+      <tr>
+        <td><strong>Real-Time Streaming</strong></td>
+        <td><strong>Socket.IO 4 (WebSockets)</strong></td>
+        <td>Pushes live telemetry updates to the frontend every 2 seconds with sub-millisecond latency.</td>
+      </tr>
+      <tr>
+        <td><strong>Cloud Database</strong></td>
+        <td><strong>MongoDB Atlas Cloud</strong></td>
+        <td>Stores all telemetry streams, fleet inventory, egress proofs, and 8 dedicated innovation collections in the cloud.</td>
+      </tr>
+      <tr>
+        <td><strong>Database Driver</strong></td>
+        <td><strong>Mongoose v8/9</strong></td>
+        <td>Enforces strict data schemas, validation, and auto-seeding for collectors, honeytokens, and audit ledgers.</td>
+      </tr>
+      <tr>
+        <td><strong>Edge Collector</strong></td>
+        <td><strong>Python 3.10+</strong></td>
+        <td>Runs locally on the monitored machine, samples system statistics using <code>psutil</code>, and enforces zero-trust privacy.</td>
+      </tr>
+      <tr>
+        <td><strong>Edge Offline Buffer</strong></td>
+        <td><strong>SQLite3 (WAL Mode)</strong></td>
+        <td>Local queue that stores telemetry during internet outages and replays it upon reconnection with zero data loss.</td>
+      </tr>
+      <tr>
+        <td><strong>Security & Cryptography</strong></td>
+        <td><strong>HMAC SHA-256</strong></td>
+        <td>Ensures tamper-proof envelope transmission and blockchain-like audit chaining between edge and cloud.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4. Core Algorithms & Mathematical Engines (Made Simple)</h2>
+
+  <div class="box-info">
+    <h3>Algorithm 1: Multivariate Z-Score Anomaly Detection</h3>
+    <div class="formula-box">Z = (Current_Value - Mean) / Standard_Deviation</div>
+    <p>
+      <strong>How it works:</strong> The system remembers the normal baseline for CPU, RAM, Disk, and Latency over the last 30 readings. When a sudden spike occurs, it calculates the Z-Score. If |Z| &gt; 2.5, it mathematically knows this is an abnormal event and flags an anomaly immediately.
+    </p>
+  </div>
+
+  <div class="box-info">
+    <h3>Algorithm 2: Dynamic Sampling with Hysteresis (75% Cost Reduction)</h3>
+    <p>
+      <strong>How it works:</strong> Transmitting data continuously to the cloud costs bandwidth and money. When the system is healthy, it sends a tiny 1-line <strong>Heartbeat</strong> summary, saving <strong>75% bandwidth</strong>. When an anomaly is detected, it instantly switches to <strong>Anomaly Burst</strong> mode (sending detailed 2-second samples). It requires 6 healthy samples in a row before cooling down, preventing alert bouncing.
+    </p>
+  </div>
+
+  <div class="box-info">
+    <h3>Algorithm 3: Shannon Entropy Secret Detection</h3>
+    <div class="formula-box">H(X) = - &sum; [ P(character) &times; log2(P(character)) ]</div>
+    <p>
+      <strong>How it works:</strong> Normal English text has low randomness (entropy around 2.0 - 3.5). Passwords, RSA private keys, and API tokens look like random gibberish (high entropy &gt; 4.5). The Privacy Guardian calculates the Shannon entropy of text strings. If it detects high entropy, it blocks the payload before it can leave!
+    </p>
+  </div>
+
+  <div class="box-info">
+    <h3>Algorithm 4: Blockchain-Style Cryptographic Hash Chaining</h3>
+    <div class="formula-box">Block_Hash = SHA256( Previous_Block_Hash + Current_Payload_Hash + Sequence_Number )</div>
+    <p>
+      <strong>How it works:</strong> Every outgoing telemetry envelope is cryptographically linked to the previous one. If a hacker intercepts the transmission and changes even 1 single byte, the hash chain breaks instantly, alerting the administrator of tampering.
+    </p>
+  </div>
+
+  <div class="footer">
+    <span>CICADA 2026 Sentinel • Complete Project Guide</span>
+    <span>Page 2 of 4</span>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== PAGE 3: THE 8 INNOVATION ENGINES ==================== -->
+  <h2>5. The 8 Innovation Features (Beyond Standard Monitoring)</h2>
+  <p>
+    Standard AIOps tools only detect crashes. CICADA Sentinel introduces <strong>8 self-protecting innovations</strong> that protect the customer's data and automatically heal the system:
+  </p>
+
+  <div class="grid-2">
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#1</span>
+        <span class="card-title">AI Privacy Guardian</span>
+      </div>
+      <div class="card-body">
+        An intelligent pre-transmission firewall that inspects all outgoing payloads. It analyzes text randomness (Shannon Entropy) and verifies strict allow-lists so secrets never leave the private machine.
+        <br><strong>MongoDB Atlas:</strong> <code>privacy_guardians</code>
+      </div>
+    </div>
+
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#2</span>
+        <span class="card-title">Canary Honeytokens</span>
+      </div>
+      <div class="card-body">
+        Fake credentials (e.g., <code>CANARY-SECRET-92831</code>) planted in test environments as deception traps. If an attacker or rogue script touches a canary, the system immediately isolates the server and halts transmission.
+        <br><strong>MongoDB Atlas:</strong> <code>honeytokens</code>
+      </div>
+    </div>
+
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#3</span>
+        <span class="card-title">Adaptive Dynamic Privacy</span>
+      </div>
+      <div class="card-body">
+        Data is categorized into 4 tiers: Public, Internal, Confidential, and Critical. When security threat levels rise from Normal to Critical, the system automatically tightens its redaction and drops non-essential metadata.
+        <br><strong>MongoDB Atlas:</strong> <code>adaptive_policies</code>
+      </div>
+    </div>
+
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#4</span>
+        <span class="card-title">Tamper Egress Ledger</span>
+      </div>
+      <div class="card-body">
+        An immutable, verifiable audit record linking every transmission using SHA-256 HMAC chains. If an attacker modifies telemetry in transit, the ledger detects the mismatch in real time.
+        <br><strong>MongoDB Atlas:</strong> <code>tamper_ledgers</code>
+      </div>
+    </div>
+
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#5</span>
+        <span class="card-title">Collector Fingerprinting</span>
+      </div>
+      <div class="card-body">
+        Monitors collector behavior: transmission frequency, payload size, and TLS certificates. If an edge agent starts behaving strangely (like burst transfers at 2 AM), it is quarantined via mTLS revocation.
+        <br><strong>MongoDB Atlas:</strong> <code>collector_fingerprints</code>
+      </div>
+    </div>
+
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#6</span>
+        <span class="card-title">Attack Correlation Graph</span>
+      </div>
+      <div class="card-body">
+        Instead of drowning engineers in 50 separate alerts, the AI engine correlates disjoint events (failed logins + CPU spike + outbound burst) into a single unified attack story mapped to the MITRE ATT&CK framework.
+        <br><strong>MongoDB Atlas:</strong> <code>attack_graphs</code>
+      </div>
+    </div>
+
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#7</span>
+        <span class="card-title">Policy Simulator Sandbox</span>
+      </div>
+      <div class="card-body">
+        Allows administrators to test new filtering rules on historical data before pushing them live. It predicts exactly how many records will be blocked and how much bandwidth will be saved.
+        <br><strong>MongoDB Atlas:</strong> <code>policy_simulators</code>
+      </div>
+    </div>
+
+    <div class="card-feature">
+      <div class="card-feature-header">
+        <span class="card-num">#8</span>
+        <span class="card-title">Reversible Remediation</span>
+      </div>
+      <div class="card-body">
+        Provides human-approved remediation actions (rotate token, isolate node, restore policy). Every action has an automatic 60-second safety countdown timer that rolls back if metrics do not improve!
+        <br><strong>MongoDB Atlas:</strong> <code>remediations</code>
+      </div>
+    </div>
+  </div>
+
+  <h2>6. MongoDB Atlas Database Integration</h2>
+  <p>
+    All data is stored in the user's cloud MongoDB Atlas cluster (<code>cluster0.ylwjczh.mongodb.net</code>) under database <strong><code>cicada_sentinel</code></strong>:
+  </p>
+  <ul>
+    <li><strong>Core Observability Collections:</strong> <code>collectors</code>, <code>telemetries</code>, <code>egressproofs</code>, <code>alerts</code>, <code>incidents</code>.</li>
+    <li><strong>8 Innovation Collections:</strong> <code>privacy_guardians</code>, <code>honeytokens</code>, <code>adaptive_policies</code>, <code>tamper_ledgers</code>, <code>collector_fingerprints</code>, <code>attack_graphs</code>, <code>policy_simulators</code>, <code>remediations</code>.</li>
+    <li><strong>Live Synchronous Updates:</strong> Whenever a button is clicked in the dashboard (e.g. trigger canary, simulate rogue collector, approve fix), MongoDB Atlas is updated in real time!</li>
+  </ul>
+
+  <div class="footer">
+    <span>CICADA 2026 Sentinel • Complete Project Guide</span>
+    <span>Page 3 of 4</span>
+  </div>
+
+  <div class="page-break"></div>
+
+  <!-- ==================== PAGE 4: PITCH & DEMO GUIDE ==================== -->
+  <h2>7. How to Pitch This to Judges (3-Minute Script)</h2>
+
+  <div class="box-warn">
+    <h3>The Problem Hook (0 - 30 seconds):</h3>
+    <p>
+      <em>"Judges, every modern cloud company uses monitoring tools like Datadog. But they have a dangerous blind spot: they transmit raw logs containing API keys, database credentials, and customer PII to external clouds. If an unredacted log leaks, your company faces massive GDPR fines and data breaches."</em>
+    </p>
+  </div>
+
+  <div class="box-info">
+    <h3>Our Solution (30 - 90 seconds):</h3>
+    <p>
+      <em>"We built CICADA Sentinel: a Two-Tier Zero-Trust AIOps platform. Our local Python collector keeps all raw logs strictly on the customer's machine. Before any metadata is sent, our AI Privacy Guardian inspects the payload using Shannon Entropy and Honeytoken traps. It guarantees that ZERO sensitive data leaves the perimeter."</em>
+    </p>
+  </div>
+
+  <div class="box-success">
+    <h3>The Differentiators & Live Demo (90 - 180 seconds):</h3>
+    <p>
+      <em>"Unlike standard dashboards that just draw line charts, CICADA Sentinel introduces 8 self-protecting innovations:
+      <br>1. <strong>Canary Honeytokens</strong> that catch leaks before they escape.
+      <br>2. A <strong>Tamper-Evident SHA-256 Ledger</strong> that mathematically proves integrity.
+      <br>3. An <strong>Attack Relationship Graph</strong> that turns noisy alerts into unified causal stories.
+      <br>4. <strong>Reversible Remediation</strong> with 60-second automated rollback safety timers.
+      <br>All backed by live WebSockets and durable persistence in <strong>MongoDB Atlas</strong>."</em>
+    </p>
+  </div>
+
+  <h2>8. The 5 Live Demo Buttons on Your Dashboard</h2>
+  <p>To demonstrate the platform to judges, click the demo buttons pinned at the top of your dashboard:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Button</th>
+        <th>What It Does Live</th>
+        <th>What Judges Will See</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. PII & Egress Proof</strong></td>
+        <td>Simulates an application log with passwords, credit card numbers, and raw IPs.</td>
+        <td>The <strong>Egress Proof Inspector</strong> shows raw data intercepted on the left, while outgoing payload shows 100% redaction with zero sensitive fields!</td>
+      </tr>
+      <tr>
+        <td><strong>2. Sudden CPU Spike</strong></td>
+        <td>Spikes CPU load from 30% to 96.4%.</td>
+        <td>Sampling shifts from <code>HEARTBEAT</code> to <code>ANOMALY_BURST</code>, and the Multivariate Z-Score flags an anomaly in real time.</td>
+      </tr>
+      <tr>
+        <td><strong>3. Latency Degradation</strong></td>
+        <td>Injects 485ms latency and packet loss.</td>
+        <td>Health state instantly downgrades to <code>FAIR</code>/<code>POOR</code> with visual chart tracking.</td>
+      </tr>
+      <tr>
+        <td><strong>4. Offline Network Outage</strong></td>
+        <td>Temporarily disconnects the cloud backend.</td>
+        <td>The edge collector buffers records in local SQLite outbox. Upon reconnect, all events replay with <strong>zero loss and zero duplicates</strong>.</td>
+      </tr>
+      <tr>
+        <td><strong>5. Multi-Signal Correlation</strong></td>
+        <td>Simultaneously spikes CPU, RAM, and Latency.</td>
+        <td>AI engine groups all 3 signals into <strong>1 Resource Exhaustion Incident</strong> with root cause analysis and a 1-click fix with 60s rollback.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>9. Quick Access & Verification Links</h2>
+  <ul>
+    <li><strong>Live Web Dashboard:</strong> <code>http://localhost:5000</code></li>
+    <li><strong>HTML Documentation:</strong> <code>http://localhost:5000/project_guide.html</code></li>
+    <li><strong>GitHub Repository:</strong> <code>https://github.com/chiranthan-08/securitydashboard</code></li>
+    <li><strong>MongoDB Atlas Cluster:</strong> <code>cluster0.ylwjczh.mongodb.net</code> (Database: <code>cicada_sentinel</code>)</li>
+  </ul>
+
+  <div class="footer">
+    <span>CICADA 2026 Sentinel • Complete Project Guide</span>
+    <span>Page 4 of 4</span>
+  </div>
+
+</body>
+</html>
